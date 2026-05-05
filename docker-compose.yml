@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  # 1. DATABASE (Persistent)
+  mongodb:
+    image: mongo:latest
+    container_name: rpl_mongo
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+
+  # 2. CACHE (Persistent)
+  redis:
+    image: redis:alpine
+    container_name: rpl_redis
+    restart: always
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  # 3. BACKEND API
+  backend:
+    build: ./BACKEND
+    container_name: rpl_backend
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017/cricket_engine
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=rpl_secret_key_2026_super_secure
+      - PORT=3000
+    depends_on:
+      - mongodb
+      - redis
+    volumes:
+      # CRITICAL: Saves player photos permanently to the host server
+      - uploads_data:/app/uploads 
+
+  # 4. FRONTEND UI & API GATEWAY
+  frontend:
+    build: ./FRONTEND
+    container_name: rpl_frontend
+    restart: always
+    ports:
+      # Bind directly to the host's web ports for SSL
+      - "80:80"
+      - "443:443"
+    volumes:
+      # CRITICAL: Mounts the host's SSL certificates into the container as read-only
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    depends_on:
+      - backend
+
+# Declare the persistent volumes so Docker knows never to delete them
+volumes:
+  mongodb_data:
+  redis_data:
+  uploads_data:
