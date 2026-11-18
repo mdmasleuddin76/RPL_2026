@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const adminAxios = axios.create({
-  baseURL: 'http://localhost:3000/api/admin',
+  baseURL: import.meta.env.VITE_ADMIN_API || '/api/admin',
 });
 
 // Automatically attach token to headers
